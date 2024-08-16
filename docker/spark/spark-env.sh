@@ -1,0 +1,3 @@
+export SPARK_MASTER_HOST=spark
+export SPARK_WORKER_CORES=2
+export SPARK_WORKER_MEMORY=2g

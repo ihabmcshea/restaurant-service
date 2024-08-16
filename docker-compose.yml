@@ -1,0 +1,141 @@
+services:
+  mongodb_server:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    environment:
+      - CONN_STR=mongodb://${DATABASE_USER}:${DATABASE_PASSWORD}@mongodb
+    command: '/bin/bash -c "sleep 5; mongosh $$CONN_STR --eval \"show dbs;\""'
+    depends_on:
+      - mongodb
+  mongodb:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DATABASE_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${DATABASE_PASSWORD}
+    ports:
+      - 27017:27017
+    volumes:
+      - mongo-data:/data
+    networks:
+      - app-network
+  # clickhouse:
+  #   image: yandex/clickhouse-server:latest
+  #   container_name: clickhouse
+  #   build:
+  #     context: ./backend
+  #     dockerfile: clickhouse-dockerfile
+  #   ports:
+  #     - "8123:8123"  # HTTP interface
+  #     - "9000:9000"  # Native interface
+  #   volumes:
+  #     - clickhouse_data:/var/lib/clickhouse
+  #     - ./docker/init-clickhouse.sh:/docker-entrypoint-initclickhouse.d/init-clickhouse.sh
+  #   env_file:
+  #     - .env
+
+  redis:
+    build:
+      context: ./docker/redis
+      dockerfile: ./Dockerfile
+    env_file:
+      - .env
+    container_name: redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    networks:
+      - app-network
+
+
+  elasticsearch:
+    container_name: elasticsearch
+    build:
+      context: ./docker/elasticsearch
+      dockerfile: ./Dockerfile
+    environment:
+      discovery.type: single-node
+    ports:
+      - "${ELASTICSEARCH_HTTP_PORT}:9200"
+      - "${ELASTICSEARCH_TRANSPORT_PORT}:9300"
+
+  kafka:
+    container_name: kafka
+    build:
+      context: ./docker/kafka
+      dockerfile: ./Dockerfile
+    ports:
+      - "9092:9092"
+
+  flink:
+    container_name: flink
+    build:
+      context: ./docker/flink
+      dockerfile: ./Dockerfile
+    ports:
+      - "8081:8081"
+    environment:
+      JOB_MANAGER_RPC_ADDRESS: flink
+    command: jobmanager
+
+  # spark:
+  #   container_name: spark-master
+  #   build:
+  #     dockerfile: ./docker/spark/Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     SPARK_MODE: master
+
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    container_name: backend_api
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+      - kafka
+      - redis
+      - flink
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ./.env:/app/.env
+    ports:
+      - "${BACKEND_PORT}:4000"
+    networks:
+      - app-network
+
+  nginx:
+    build: ./docker/nginx
+    container_name: nginx_restaurants
+    depends_on:
+      - backend
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+  # flink-job:
+  #   build:
+  #     context: ./flink-topk-items
+  #     dockerfile: Dockerfile
+  #   container_name: flink-job
+  #   depends_on:
+  #     - flink
+  #     - kafka
+  #     - db_restaurant
+  #     - redis
+  #     - elasticsearch
+    networks:
+      - app-network
+  #   command: ["java", "-cp", "flink-job.jar", "com.ihab.FlinkTopKJob"] 
+
+
+
+
+volumes:
+  mongo-data:
+
+networks:
+  app-network:
+    driver: bridge

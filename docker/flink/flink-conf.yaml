@@ -1,0 +1,16 @@
+jobmanager.rpc.port: 6123
+taskmanager.rpc.port: 6124
+taskmanager.data.port: 6125
+taskmanager.shuffle.port: 6126
+rest.port: 8081
+# flink-conf.yaml
+
+# Memory settings for JobManager
+jobmanager.memory.flink.size: 1024m
+jobmanager.memory.heap.size: 1024m
+jobmanager.memory.process.size: 2048m
+
+# Memory settings for TaskManager
+taskmanager.memory.flink.size: 2048m
+taskmanager.memory.heap.size: 2048m
+taskmanager.memory.process.size: 4096m
