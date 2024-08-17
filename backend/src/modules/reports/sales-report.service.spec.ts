@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { SalesReportService } from './sales-report.service';
 import { InternalServerErrorException } from '@nestjs/common';
-import { Order } from '../orders/schemas/order.schema';
 import { OrdersModule } from '../orders/orders.module';
 
 describe('SalesReportService', () => {
