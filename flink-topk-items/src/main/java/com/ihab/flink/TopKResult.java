@@ -1,4 +1,4 @@
-package com.example.flink;
+package com.ihab.flink;
 
 import java.util.List;
 

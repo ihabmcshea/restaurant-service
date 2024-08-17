@@ -1,4 +1,4 @@
-package com.example.flink;
+package com.ihab.flink;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.flink.api.common.serialization.SerializationSchema;
