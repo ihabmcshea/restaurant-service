@@ -25,6 +25,7 @@ jobs:
         run: |
           cd backend
           yarn install
+          yarn global add @nestjs/cli
 
       - name: Run lint (Backend)
         run: |
