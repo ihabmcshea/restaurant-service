@@ -36,8 +36,14 @@ export class SalesReportService {
       }
 
       const pipeline: PipelineStage[] = [
-        { $match: { createdAt: { $gte: startDate, $lt: endDate } } },
-        { $unwind: { path: '$items' } },
+        {
+          $match: {
+            createdAt: { $gte: startDate, $lt: endDate },
+          },
+        },
+        {
+          $unwind: '$items', // Unwind the items array
+        },
         {
           $group: {
             _id: null,
@@ -46,28 +52,62 @@ export class SalesReportService {
             itemsSold: {
               $push: {
                 itemId: '$items.item._id',
-                title: '$items.item.title', // Assuming 'title' is available in items
-                quantitySold: { $sum: '$items.quantity' },
+                title: '$items.item.title',
+                quantitySold: {
+                  $sum: '$items.quantity', // Sum up quantities for each item
+                },
               },
             },
           },
         },
-        { $unwind: '$itemsSold' },
         {
-          $group: {
-            _id: '$itemsSold.itemId',
-            title: { $first: '$itemsSold.title' },
-            quantitySold: { $sum: '$itemsSold.quantitySold' },
+          $addFields: {
+            itemsSold: {
+              $map: {
+                input: { $setUnion: ['$itemsSold.itemId'] }, // Ensure unique items
+                as: 'itemId',
+                in: {
+                  itemId: '$$itemId',
+                  title: {
+                    $arrayElemAt: [
+                      {
+                        $filter: {
+                          input: '$itemsSold',
+                          cond: { $eq: ['$$this.itemId', '$$itemId'] },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                  quantitySold: {
+                    $sum: {
+                      $map: {
+                        input: {
+                          $filter: {
+                            input: '$itemsSold',
+                            cond: { $eq: ['$$this.itemId', '$$itemId'] },
+                          },
+                        },
+                        as: 'item',
+                        in: '$$item.quantitySold',
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
-        },
-        {
-          $sort: { quantitySold: -1 }, // Sort by quantitySold descending
         },
         {
           $project: {
             _id: 0,
-            title: 1,
-            quantitySold: 1,
+            totalRevenue: 1,
+            totalOrders: 1,
+            itemsSold: {
+              itemId: 1,
+              title: 1,
+              quantitySold: 1,
+            },
           },
         },
       ];

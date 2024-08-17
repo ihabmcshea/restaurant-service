@@ -54,8 +54,7 @@ export class ItemsService {
 
   async create(createItemDto: CreateItemDto): Promise<Item> {
     try {
-      const item = new this.itemModel(createItemDto);
-      await item.save();
+      const item = await this.itemModel.create(createItemDto);
       await this.redisService.delete('items:all'); // Invalidate cache
       return item;
     } catch (error) {
@@ -66,31 +65,39 @@ export class ItemsService {
 
   async update(id: string, updateItemDto: UpdateItemDto): Promise<Item | null> {
     try {
+      console.log('Updating item with id:', id);
       const item = await this.itemModel
         .findByIdAndUpdate(id, updateItemDto, { new: true })
         .exec();
       if (item) {
+        console.log('Item updated, updating cache');
         await this.redisService.setExpirable(
           `item:${id}`,
           JSON.stringify(item),
           1,
         );
+        console.log('Cache updated, invalidating cache for items:all');
         await this.redisService.delete('items:all'); // Invalidate cache
       }
       return item;
     } catch (error) {
-      logger.error(`Failed to update item with id ${id}:`, error);
+      console.error('Error updating item:', error);
       throw new InternalServerErrorException('Failed to update item');
     }
   }
 
   async remove(id: string): Promise<void> {
     try {
-      await this.itemModel.findByIdAndDelete(id).exec();
+      console.log('Attempting to delete item with id:', id); // Log the ID being used
+      const result = await this.itemModel.findByIdAndDelete(id).exec();
+      console.log('Delete result:', result); // Log the result of deletion
+
       await this.redisService.delete(`item:${id}`);
       await this.redisService.delete('items:all'); // Invalidate cache
+
+      console.log('Successfully deleted item and invalidated cache');
     } catch (error) {
-      logger.error(`Failed to delete item with id ${id}:`, error);
+      console.error(`Failed to delete item with id ${id}:`, error); // Log the error details
       throw new InternalServerErrorException('Failed to delete item');
     }
   }
