@@ -20,6 +20,7 @@ import { OrdersService } from './orders.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { Order } from './schemas/order.schema';
+import logger from '../../common/logging/winston-logger';
 
 @ApiTags('orders')
 @Controller('orders')
@@ -39,7 +40,7 @@ export class OrdersController {
     try {
       return await this.ordersService.create(createOrderDto);
     } catch (error) {
-      console.error('Error creating order:', error);
+      logger.error('Error creating order:', error);
       throw new HttpException(
         'Failed to create order',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -59,7 +60,7 @@ export class OrdersController {
     try {
       return await this.ordersService.findAll();
     } catch (error) {
-      console.error('Error finding orders:', error);
+      logger.error('Error finding orders:', error);
       throw new HttpException(
         'Failed to retrieve orders',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -81,7 +82,7 @@ export class OrdersController {
     try {
       return await this.ordersService.findOne(id);
     } catch (error) {
-      console.error(`Error finding order with id ${id}:`, error);
+      logger.error(`Error finding order with id ${id}:`, error);
       throw new HttpException(
         'Failed to retrieve order',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -107,7 +108,7 @@ export class OrdersController {
     try {
       return await this.ordersService.update(id, updateOrderDto);
     } catch (error) {
-      console.error(`Error updating order with id ${id}:`, error);
+      logger.error(`Error updating order with id ${id}:`, error);
       throw new HttpException(
         'Failed to update order',
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -125,7 +126,7 @@ export class OrdersController {
     try {
       await this.ordersService.remove(id);
     } catch (error) {
-      console.error(`Error deleting order with id ${id}:`, error);
+      logger.error(`Error deleting order with id ${id}:`, error);
       throw new HttpException(
         'Failed to delete order',
         HttpStatus.INTERNAL_SERVER_ERROR,

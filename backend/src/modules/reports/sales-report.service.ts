@@ -1,9 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, PipelineStage } from 'mongoose';
 import { RedisService } from '../redis/redis.service';
 import { DailySalesReportDto } from './dto/reports.dto';
 import { Order } from '../orders/schemas/order.schema';
+import logger from '../../common/logging/winston-logger';
 
 @Injectable()
 export class SalesReportService {
@@ -14,45 +20,21 @@ export class SalesReportService {
     private readonly redisService: RedisService,
   ) {}
 
-  private getStartAndEndOfToday(): { startDate: Date; endDate: Date } {
-    const now = new Date();
-    const startDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0,
-    );
-    const endDate = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      23,
-      59,
-      59,
-      999,
-    );
-    return { startDate, endDate };
-  }
-
   async generateDailySalesReport(): Promise<DailySalesReportDto> {
-    // const { startDate, endDate } = this.getStartAndEndOfToday();
-    // const cacheKey = `daily_sales_report_${startDate.toISOString()}_${endDate.toISOString()}`;
-    // const cachedReport = await this.redisService.get(cacheKey);
-
-    // if (cachedReport) {
-    //   this.logger.log('Returning cached sales report');
-    //   return JSON.parse(cachedReport) as DailySalesReportDto;
-    // }
     const startDate = new Date();
     startDate.setHours(0, 0, 0, 0);
 
     const endDate = new Date();
     endDate.setHours(23, 59, 59, 999);
 
+    const cacheKey = `daily_sales_report_${startDate.toISOString()}_${endDate.toISOString()}`;
     try {
+      const cachedReport = await this.redisService.get(cacheKey);
+      if (cachedReport) {
+        this.logger.log('Returning cached sales report');
+        return JSON.parse(cachedReport) as DailySalesReportDto;
+      }
+
       const pipeline: PipelineStage[] = [
         { $match: { createdAt: { $gte: startDate, $lt: endDate } } },
         { $unwind: { path: '$items' } },
@@ -96,17 +78,15 @@ export class SalesReportService {
         throw new NotFoundException('No report found for today');
       }
 
-      //   // Cache the report in Redis
-      //   await this.redisService.setExpirable(
-      //     cacheKey,
-      //     JSON.stringify(report),
-      //     24,
-      //   ); // Cache for 24 hours
+      // Cache the report in Redis
+      await this.redisService.setExpirable(cacheKey, JSON.stringify(report), 1); // Cache for 1 hour
 
       return report as DailySalesReportDto;
     } catch (error) {
-      this.logger.error('Error generating daily sales report', error.stack);
-      throw new Error('Failed to generate daily sales report');
+      logger.error('Error generating daily sales report', error.stack);
+      throw new InternalServerErrorException(
+        'Failed to generate daily sales report',
+      );
     }
   }
 }

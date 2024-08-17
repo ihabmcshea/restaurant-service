@@ -5,6 +5,7 @@ import { Item } from './schemas/item.schema';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { RedisService } from '../redis/redis.service';
+import logger from '../../common/logging/winston-logger';
 
 @Injectable()
 export class ItemsService {
@@ -26,7 +27,7 @@ export class ItemsService {
       await this.redisService.setExpirable(cacheKey, JSON.stringify(items), 1); // cache for 1 hour
       return items;
     } catch (error) {
-      console.error('Failed to find all items:', error);
+      logger.error('Failed to find all items:', error);
       throw new InternalServerErrorException('Failed to retrieve items');
     }
   }
@@ -46,7 +47,7 @@ export class ItemsService {
       }
       return item;
     } catch (error) {
-      console.error(`Failed to find item with id ${id}:`, error);
+      logger.error(`Failed to find item with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to retrieve item');
     }
   }
@@ -58,7 +59,7 @@ export class ItemsService {
       await this.redisService.delete('items:all'); // Invalidate cache
       return item;
     } catch (error) {
-      console.error('Failed to create item:', error);
+      logger.error('Failed to create item:', error);
       throw new InternalServerErrorException('Failed to create item');
     }
   }
@@ -78,7 +79,7 @@ export class ItemsService {
       }
       return item;
     } catch (error) {
-      console.error(`Failed to update item with id ${id}:`, error);
+      logger.error(`Failed to update item with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to update item');
     }
   }
@@ -89,7 +90,7 @@ export class ItemsService {
       await this.redisService.delete(`item:${id}`);
       await this.redisService.delete('items:all'); // Invalidate cache
     } catch (error) {
-      console.error(`Failed to delete item with id ${id}:`, error);
+      logger.error(`Failed to delete item with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to delete item');
     }
   }

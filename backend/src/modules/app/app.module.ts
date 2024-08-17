@@ -3,6 +3,9 @@ import { Module, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import * as redisStore from 'cache-manager-redis-store';
 import { RedisClientOptions } from 'redis';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
+
 import { ItemsModule } from '../items/items.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { OrdersModule } from '../orders/orders.module';
@@ -17,6 +20,17 @@ import { ReportsModule } from '../reports/reports.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [() => GLOBAL_CONFIG],
+    }),
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple(),
+          ),
+        }),
+        new winston.transports.File({ filename: 'application.log' }),
+      ],
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
@@ -35,7 +49,7 @@ import { ReportsModule } from '../reports/reports.module';
         ({
           store: redisStore,
           url: 'redis://redis:6379',
-        }) as RedisClientOptions,
+        } as RedisClientOptions),
       inject: [ConfigService],
     }),
   ],

@@ -1,8 +1,7 @@
 import {
-  HttpException,
-  HttpStatus,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -11,6 +10,7 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { RedisService } from '../redis/redis.service';
 import { Item } from '../items/schemas/item.schema';
+import logger from '../../common/logging/winston-logger';
 
 @Injectable()
 export class OrdersService {
@@ -33,7 +33,7 @@ export class OrdersService {
       await this.redisService.setExpirable(cacheKey, JSON.stringify(orders), 1); // cache for 1 hour
       return orders;
     } catch (error) {
-      console.error('Failed to find all orders:', error);
+      logger.error('Failed to find all orders:', error);
       throw new InternalServerErrorException('Failed to retrieve orders');
     }
   }
@@ -57,7 +57,7 @@ export class OrdersService {
       }
       return order;
     } catch (error) {
-      console.error(`Failed to find order with id ${id}:`, error);
+      logger.error(`Failed to find order with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to retrieve order');
     }
   }
@@ -70,9 +70,8 @@ export class OrdersService {
           const itemId = new Types.ObjectId(item.itemId); // Convert to ObjectId
           const foundItem = await this.itemModel.findById(itemId);
           if (!foundItem) {
-            throw new HttpException(
+            throw new NotFoundException(
               `Item with ID ${item.itemId} not found`,
-              HttpStatus.NOT_FOUND,
             );
           }
           return {
@@ -95,11 +94,11 @@ export class OrdersService {
 
       return await newOrder.save();
     } catch (error) {
-      console.error('Error creating order:', error);
-      throw new HttpException(
-        'Failed to create order',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+      logger.error('Failed to create order:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create order');
     }
   }
 
@@ -125,7 +124,7 @@ export class OrdersService {
       }
       return order;
     } catch (error) {
-      console.error(`Failed to update order with id ${id}:`, error);
+      logger.error(`Failed to update order with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to update order');
     }
   }
@@ -136,7 +135,7 @@ export class OrdersService {
       await this.redisService.delete(`order:${id}`);
       await this.redisService.delete('orders:all'); // Invalidate cache
     } catch (error) {
-      console.error(`Failed to delete order with id ${id}:`, error);
+      logger.error(`Failed to delete order with id ${id}:`, error);
       throw new InternalServerErrorException('Failed to delete order');
     }
   }

@@ -11,6 +11,7 @@ import { AppModule } from './modules/app/app.module';
 import { API_PREFIX } from './shared/constants/global.constants';
 import { GLOBAL_CONFIG } from './config/global.config';
 import { SwaggerConfig } from './config/config.interface';
+import { HttpExceptionFilter } from './common/filters/HttpExceptionFilter';
 
 dotenv.config();
 
@@ -21,10 +22,6 @@ async function bootstrap() {
 
   // Set global prefix for all routes
   app.setGlobalPrefix(API_PREFIX);
-
-  // Apply global exception filter
-  // app.useGlobalFilters(new PrismaClientExceptionFilter());
-  // app.useGlobalFilters(new HttpExceptionFilter());
 
   // Configure CORS
   app.use(
@@ -46,6 +43,8 @@ async function bootstrap() {
       transform: true, // Automatically transform payloads to DTOs
     }),
   );
+
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // Swagger setup
   const configService = app.get<ConfigService>(ConfigService);

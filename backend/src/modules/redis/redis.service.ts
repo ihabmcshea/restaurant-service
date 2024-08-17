@@ -1,7 +1,12 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Injectable, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { Cache } from 'cache-manager';
 import Redis from 'ioredis';
+import logger from '../../common/logging/winston-logger';
 
 @Injectable()
 export class RedisService {
@@ -24,7 +29,8 @@ export class RedisService {
     try {
       await this.redisClient.set(key, value, 'EX', expiryInHours * 60 * 60);
     } catch (error) {
-      console.error(`Failed to set expirable key ${key}:`, error);
+      logger.error(`Failed to set expirable key ${key}:`, error);
+      throw new InternalServerErrorException('Failed to set expirable key');
     }
   }
 
@@ -32,7 +38,8 @@ export class RedisService {
     try {
       await this.redisClient.set(key, value);
     } catch (error) {
-      console.error(`Failed to set key ${key}:`, error);
+      logger.error(`Failed to set key ${key}:`, error);
+      throw new InternalServerErrorException('Failed to set key');
     }
   }
 
@@ -40,8 +47,8 @@ export class RedisService {
     try {
       return await this.redisClient.get(key);
     } catch (error) {
-      console.error(`Failed to get key ${key}:`, error);
-      return null;
+      logger.error(`Failed to get key ${key}:`, error);
+      throw new InternalServerErrorException('Failed to get key');
     }
   }
 
@@ -49,7 +56,8 @@ export class RedisService {
     try {
       await this.redisClient.del(key);
     } catch (error) {
-      console.error(`Failed to delete key ${key}:`, error);
+      logger.error(`Failed to delete key ${key}:`, error);
+      throw new InternalServerErrorException('Failed to delete key');
     }
   }
 
@@ -60,7 +68,8 @@ export class RedisService {
         callback(message);
       });
     } catch (error) {
-      console.error(`Failed to subscribe to channel ${channel}:`, error);
+      logger.error(`Failed to subscribe to channel ${channel}:`, error);
+      throw new InternalServerErrorException('Failed to subscribe to channel');
     }
   }
 
@@ -68,7 +77,10 @@ export class RedisService {
     try {
       await this.subscriber.unsubscribe(channel);
     } catch (error) {
-      console.error(`Failed to unsubscribe from channel ${channel}:`, error);
+      logger.error(`Failed to unsubscribe from channel ${channel}:`, error);
+      throw new InternalServerErrorException(
+        'Failed to unsubscribe from channel',
+      );
     }
   }
 }

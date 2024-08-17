@@ -6,12 +6,15 @@ import {
   Param,
   Put,
   Delete,
+  InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CreateItemDto } from './dto/create-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
 import { Item } from './schemas/item.schema';
 import { ItemsService } from './items.service';
+import logger from '../../common/logging/winston-logger';
 
 @ApiTags('items')
 @Controller('items')
@@ -26,14 +29,24 @@ export class ItemsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid input.' })
   async create(@Body() createItemDto: CreateItemDto): Promise<Item> {
-    return this.itemsService.create(createItemDto);
+    try {
+      return await this.itemsService.create(createItemDto);
+    } catch (error) {
+      logger.error('Failed to create item:', error);
+      throw new InternalServerErrorException('Failed to create item');
+    }
   }
 
   @Get()
   @ApiOperation({ summary: 'Retrieve all items' })
   @ApiResponse({ status: 200, description: 'List of items.' })
   async findAll(): Promise<Item[]> {
-    return this.itemsService.findAll();
+    try {
+      return await this.itemsService.findAll();
+    } catch (error) {
+      logger.error('Failed to retrieve all items:', error);
+      throw new InternalServerErrorException('Failed to retrieve items');
+    }
   }
 
   @Get(':id')
@@ -42,7 +55,19 @@ export class ItemsController {
   @ApiResponse({ status: 200, description: 'The item with the specified ID.' })
   @ApiResponse({ status: 404, description: 'Item not found.' })
   async findOne(@Param('id') id: string): Promise<Item | null> {
-    return this.itemsService.findOne(id);
+    try {
+      const item = await this.itemsService.findOne(id);
+      if (!item) {
+        throw new NotFoundException(`Item with ID ${id} not found`);
+      }
+      return item;
+    } catch (error) {
+      logger.error(`Failed to retrieve item with ID ${id}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve item');
+    }
   }
 
   @Put(':id')
@@ -54,7 +79,19 @@ export class ItemsController {
     @Param('id') id: string,
     @Body() updateItemDto: UpdateItemDto,
   ): Promise<Item | null> {
-    return this.itemsService.update(id, updateItemDto);
+    try {
+      const item = await this.itemsService.update(id, updateItemDto);
+      if (!item) {
+        throw new NotFoundException(`Item with ID ${id} not found`);
+      }
+      return item;
+    } catch (error) {
+      logger.error(`Failed to update item with ID ${id}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to update item');
+    }
   }
 
   @Delete(':id')
@@ -66,6 +103,14 @@ export class ItemsController {
   })
   @ApiResponse({ status: 404, description: 'Item not found.' })
   async remove(@Param('id') id: string): Promise<void> {
-    return this.itemsService.remove(id);
+    try {
+      await this.itemsService.remove(id);
+    } catch (error) {
+      logger.error(`Failed to delete item with ID ${id}:`, error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete item');
+    }
   }
 }
