@@ -138,7 +138,7 @@ export class SalesReportService {
       ];
 
       const [report] = await this.orderModel.aggregate(pipeline).exec();
-
+      console.log('report, ', report);
       if (!report) {
         throw new NotFoundException('No report found for today');
       }
