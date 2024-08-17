@@ -30,10 +30,10 @@ export class SalesReportService {
     const cacheKey = `daily_sales_report_${startDate.toISOString()}_${endDate.toISOString()}`;
     try {
       const cachedReport = await this.redisService.get(cacheKey);
-      // if (cachedReport) {
-      // this.logger.log('Returning cached sales report');
-      // return JSON.parse(cachedReport) as DailySalesReportDto;
-      // }
+      if (cachedReport) {
+        this.logger.log('Returning cached sales report');
+        return JSON.parse(cachedReport) as DailySalesReportDto;
+      }
 
       const pipeline: PipelineStage[] = [
         {

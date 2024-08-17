@@ -1,0 +1,66 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  lint-backend:
+    name: Lint Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies (Backend)
+        run: |
+          cd backend
+          yarn install
+
+      - name: Run lint (Backend)
+        run: |
+          cd backend
+          yarn lint
+
+      - name: Run Prettier check (Backend)
+        run: |
+          cd backend
+          yarn prettier:check
+
+
+  build-backend:
+    name: Build and Test Backend
+    runs-on: ubuntu-latest
+    needs: [lint-backend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+
+      - name: Install dependencies (Backend)
+        run: |
+          cd backend
+          yarn install
+
+      - name: Run tests (Backend)
+        run: |
+          cd backend
+          yarn test
+
+      - name: Build Backend
+        run: |
+          cd backend
+          yarn build
