@@ -30,10 +30,10 @@ export class SalesReportService {
     const cacheKey = `daily_sales_report_${startDate.toISOString()}_${endDate.toISOString()}`;
     try {
       const cachedReport = await this.redisService.get(cacheKey);
-      if (cachedReport) {
-        this.logger.log('Returning cached sales report');
-        return JSON.parse(cachedReport) as DailySalesReportDto;
-      }
+      // if (cachedReport) {
+      // this.logger.log('Returning cached sales report');
+      // return JSON.parse(cachedReport) as DailySalesReportDto;
+      // }
 
       const pipeline: PipelineStage[] = [
         {
@@ -53,9 +53,7 @@ export class SalesReportService {
               $push: {
                 itemId: '$items.item._id',
                 title: '$items.item.title',
-                quantitySold: {
-                  $sum: '$items.quantity', // Sum up quantities for each item
-                },
+                quantitySold: '$items.quantity',
               },
             },
           },
@@ -73,7 +71,8 @@ export class SalesReportService {
                       {
                         $filter: {
                           input: '$itemsSold',
-                          cond: { $eq: ['$$this.itemId', '$$itemId'] },
+                          as: 'item',
+                          cond: { $eq: ['$$item.itemId', '$$itemId'] },
                         },
                       },
                       0,
@@ -85,7 +84,8 @@ export class SalesReportService {
                         input: {
                           $filter: {
                             input: '$itemsSold',
-                            cond: { $eq: ['$$this.itemId', '$$itemId'] },
+                            as: 'item',
+                            cond: { $eq: ['$$item.itemId', '$$itemId'] },
                           },
                         },
                         as: 'item',
@@ -101,10 +101,37 @@ export class SalesReportService {
         {
           $addFields: {
             itemsSold: {
+              $map: {
+                input: '$itemsSold',
+                as: 'item',
+                in: {
+                  itemId: '$$item.itemId',
+                  title: '$$item.title.title',
+                  quantitySold: '$$item.quantitySold',
+                },
+              },
+            },
+          },
+        },
+        {
+          $addFields: {
+            itemsSold: {
               $sortArray: {
                 input: '$itemsSold',
                 sortBy: { quantitySold: -1 }, // Sort by quantitySold in descending order
               },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            totalRevenue: 1,
+            totalOrders: 1,
+            itemsSold: {
+              itemId: 1,
+              title: 1,
+              quantitySold: 1,
             },
           },
         },
