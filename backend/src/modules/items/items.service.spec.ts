@@ -115,32 +115,38 @@ describe('ItemsService', () => {
   });
 
   describe('remove', () => {
-    it('should successfully delete an item', async () => {
-      // Set up the mock to simulate successful deletion
-      const mockQuery = {
-        exec: jest.fn().mockResolvedValue(null),
-      };
+    it('should successfully delete an item and invalidate cache', async () => {
+      // Create mock implementations
+      const mockDelete = jest.fn().mockResolvedValue(null); // Simulate successful deletion
+      const mockDeleteAll = jest.fn().mockResolvedValue(null); // Simulate successful cache invalidation
 
-      jest
-        .spyOn(itemModel, 'findByIdAndDelete')
-        .mockReturnValue(mockQuery as any);
-      jest.spyOn(redisService, 'delete').mockResolvedValue(undefined);
+      // Mock itemModel and redisService methods
+      jest.spyOn(itemModel, 'findByIdAndDelete').mockImplementation(
+        () =>
+          ({
+            exec: mockDelete,
+          } as any),
+      );
 
-      await service.remove('1'); // Call the method
+      jest.spyOn(redisService, 'delete').mockImplementation(mockDeleteAll);
 
+      // Call the service method
+      await service.remove('1');
+
+      // Check if delete and cache invalidation were called
       expect(itemModel.findByIdAndDelete).toHaveBeenCalledWith('1');
       expect(redisService.delete).toHaveBeenCalledWith('item:1');
       expect(redisService.delete).toHaveBeenCalledWith('items:all');
     });
 
     it('should handle delete errors', async () => {
-      const mockQuery = {
-        exec: jest.fn().mockRejectedValue(new Error('Delete failed')),
-      };
-
-      jest
-        .spyOn(itemModel, 'findByIdAndDelete')
-        .mockReturnValue(mockQuery as any);
+      // Mock to throw error
+      jest.spyOn(itemModel, 'findByIdAndDelete').mockImplementation(
+        () =>
+          ({
+            exec: jest.fn().mockRejectedValue(new Error('Delete failed')),
+          } as any),
+      );
 
       await expect(service.remove('1')).rejects.toThrow(
         InternalServerErrorException,

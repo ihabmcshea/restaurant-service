@@ -99,14 +99,12 @@ export class SalesReportService {
           },
         },
         {
-          $project: {
-            _id: 0,
-            totalRevenue: 1,
-            totalOrders: 1,
+          $addFields: {
             itemsSold: {
-              itemId: 1,
-              title: 1,
-              quantitySold: 1,
+              $sortArray: {
+                input: '$itemsSold',
+                sortBy: { quantitySold: -1 }, // Sort by quantitySold in descending order
+              },
             },
           },
         },
