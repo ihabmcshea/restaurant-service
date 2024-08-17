@@ -20,6 +20,7 @@
     "start:dev": "nest start --config tsconfig.json --watch"
   },
   "dependencies": {
+    "@nestjs/cli": "^9.0.0",
     "@elastic/elasticsearch": "^8.15.0",
     "@nestjs-modules/mailer": "^2.0.2",
     "@nestjs/cache-manager": "^2.2.2",
